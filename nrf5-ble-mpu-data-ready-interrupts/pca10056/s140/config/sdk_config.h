@@ -1361,7 +1361,7 @@
 // <e> SPIS_ENABLED - nrf_drv_spis - SPI Slave driver
 //==========================================================
 #ifndef SPIS_ENABLED
-#define SPIS_ENABLED 1
+#define SPIS_ENABLED 0
 #endif
 // <o> SPIS_DEFAULT_CONFIG_IRQ_PRIORITY  - Interrupt priority
  
@@ -1440,7 +1440,7 @@
 // <e> SPI_ENABLED - nrf_drv_spi - SPI/SPIM peripheral driver
 //==========================================================
 #ifndef SPI_ENABLED
-#define SPI_ENABLED 0
+#define SPI_ENABLED 1
 #endif
 // <o> SPI_DEFAULT_CONFIG_IRQ_PRIORITY  - Interrupt priority
  
@@ -1486,7 +1486,7 @@
 // <e> SPI0_ENABLED - Enable SPI0 instance
 //==========================================================
 #ifndef SPI0_ENABLED
-#define SPI0_ENABLED 0
+#define SPI0_ENABLED 1
 #endif
 // <q> SPI0_USE_EASY_DMA  - Use EasyDMA
  
@@ -1630,7 +1630,7 @@
 #endif
 // <o> TWIS_DEFAULT_CONFIG_ADDR0 - Address0 
 #ifndef TWIS_DEFAULT_CONFIG_ADDR0
-#define TWIS_DEFAULT_CONFIG_ADDR0 1
+#define TWIS_DEFAULT_CONFIG_ADDR0 0
 #endif
 
 // <o> TWIS_DEFAULT_CONFIG_ADDR1 - Address1 
@@ -1712,7 +1712,7 @@
 // <e> TWI_ENABLED - nrf_drv_twi - TWI/TWIM peripheral driver
 //==========================================================
 #ifndef TWI_ENABLED
-#define TWI_ENABLED 1
+#define TWI_ENABLED 0
 #endif
 // <o> TWI_DEFAULT_CONFIG_FREQUENCY  - Frequency
  
@@ -3017,7 +3017,7 @@
 // <e> NRF_LOG_BACKEND_RTT_ENABLED - nrf_log_backend_rtt - Log RTT backend
 //==========================================================
 #ifndef NRF_LOG_BACKEND_RTT_ENABLED
-#define NRF_LOG_BACKEND_RTT_ENABLED 1
+#define NRF_LOG_BACKEND_RTT_ENABLED 0
 #endif
 // <o> NRF_LOG_BACKEND_RTT_TEMP_BUFFER_SIZE - Size of buffer for partially processed strings. 
 // <i> Size of the buffer is a trade-off between RAM usage and processing.
@@ -3248,7 +3248,7 @@
 // <e> NRF_MPU_CONFIG_LOG_ENABLED - Enables logging in the module.
 //==========================================================
 #ifndef NRF_MPU_CONFIG_LOG_ENABLED
-#define NRF_MPU_CONFIG_LOG_ENABLED 1
+#define NRF_MPU_CONFIG_LOG_ENABLED 0
 #endif
 // <o> NRF_MPU_CONFIG_LOG_LEVEL  - Default Severity level
  
@@ -4961,7 +4961,7 @@
 // <4=> Debug 
 
 #ifndef NRF_SDH_BLE_LOG_LEVEL
-#define NRF_SDH_BLE_LOG_LEVEL 4
+#define NRF_SDH_BLE_LOG_LEVEL 3
 #endif
 
 // <o> NRF_SDH_BLE_INFO_COLOR  - ANSI escape code prefix.
@@ -5012,7 +5012,7 @@
 // <4=> Debug 
 
 #ifndef NRF_SDH_LOG_LEVEL
-#define NRF_SDH_LOG_LEVEL 4
+#define NRF_SDH_LOG_LEVEL 3
 #endif
 
 // <o> NRF_SDH_INFO_COLOR  - ANSI escape code prefix.
@@ -5588,8 +5588,6 @@
 #define NRF_SDH_DISPATCH_MODEL 0
 #endif
 
-// </h> 
-//==========================================================
 // </h> 
 //==========================================================
 
