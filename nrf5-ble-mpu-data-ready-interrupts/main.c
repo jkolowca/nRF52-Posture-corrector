@@ -739,9 +739,7 @@ void mpu_init(void)
     APP_ERROR_CHECK(err_code); // Check for errors in return value
     
     // Setup and configure the MPU with intial values
-    app_mpu_config_t p_mpu_config = MPU_DEFAULT_CONFIG(); // Load default values
-    // The following line decieds how fast the nRF5 will sample the MPU for data. If you sample to fast
-    // the Softdevice might not be able to transmit all the packets and you will receive a BLE_ERROR_NO_TX_PACKETS event.
+    app_mpu_config_t p_mpu_config = MPU_DEFAULT_CONFIG(); 
     p_mpu_config.smplrt_div = 199;   // Change sampelrate. Sample Rate = Gyroscope Output Rate / (1 + SMPLRT_DIV). 199 gives a sample rate of 5Hz
     p_mpu_config.accel_config.afs_sel = AFS_2G; // Set accelerometer full scale range to 2G
     err_code = app_mpu_config(&p_mpu_config); // Configure the MPU with above values
@@ -807,13 +805,13 @@ int main(void)
     timers_init();
     
     buttons_leds_init(&erase_bonds);
-    ble_stack_init();
-    gap_params_init();
-    gatt_init();
-    services_init();
-    advertising_init();
-    conn_params_init();
-    peer_manager_init();
+   // ble_stack_init();
+  //  gap_params_init();
+   // gatt_init();
+   // services_init();
+   // advertising_init();
+   // conn_params_init();
+   // peer_manager_init();
     mpu_init();
     gpiote_setup();
     
@@ -821,31 +819,32 @@ int main(void)
     NRF_LOG_INFO("MPU BLE GPIOTE Interrupt example.");
     application_timers_start();
 
-    advertising_start(erase_bonds);
+    //advertising_start(erase_bonds);
 
     accel_values_t accel_values;
+    gyro_values_t gyro_values;
     
     // Enter main loop.
     for (;;)
     {
         if (NRF_LOG_PROCESS() == false)
         {
-            power_manage();
+            //power_manage();
             
-            if(mpu_data_ready == true)
+           // if(mpu_data_ready == true)
             {
                 // Read accelerometer data.
                 err_code = app_mpu_read_accel(&accel_values);
                 APP_ERROR_CHECK(err_code);
                 
                 // Send MUP notification if in valid connection
-                if ((m_mpu.conn_handle != BLE_CONN_HANDLE_INVALID) && (m_mpu.is_notification_enabled))
-                {
-                    err_code = ble_mpu_update(&m_mpu, &accel_values);
-                    APP_ERROR_CHECK(err_code);
-                }
+//                if ((m_mpu.conn_handle != BLE_CONN_HANDLE_INVALID) && (m_mpu.is_notification_enabled))
+//                {
+//                    err_code = ble_mpu_update(&m_mpu, &accel_values);
+//                    APP_ERROR_CHECK(err_code);
+//                }
                 
-                NRF_LOG_INFO("Accel: %05d, %05d, %05d, 0x%04X, 0x%04X, 0x%04X", accel_values.x, accel_values.y, accel_values.z, accel_values.x, accel_values.y, accel_values.z);
+                NRF_LOG_INFO("Accel: %05d, %05d, %05d", accel_values.x, accel_values.y, accel_values.z, accel_values.x, accel_values.y, accel_values.z);
                 
                 mpu_data_ready = false;
             }
