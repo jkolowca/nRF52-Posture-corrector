@@ -34,3 +34,4 @@ The MPU-9150 contains the MPU-6050 and an AK8975 magnetometer from AKM. The MPU-
 These examples do not implement the AK8963, Digital Motion Processing (DMP), or any low power features.
 
 More on the difference between MPU6050 and MPU9150: http://www.sureshjoshi.com/embedded/invensense-imus-what-to-know/
+"# smiw" 
