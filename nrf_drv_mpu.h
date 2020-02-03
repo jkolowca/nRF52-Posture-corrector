@@ -25,7 +25,7 @@
  */
 uint32_t nrf_drv_mpu_init(void);
 	
-
+uint32_t nrf_drv_mpu_init1(void);
 
 /**@brief Function for reading an arbitrary register
  *
@@ -34,7 +34,7 @@ uint32_t nrf_drv_mpu_init(void);
  * @param[in]   length          Number of bytes to write
  * @retval      uint32_t        Error code
  */
-uint32_t nrf_drv_mpu_write_registers(uint8_t reg, uint8_t * p_data, uint32_t length);
+uint32_t nrf_drv_mpu_write_registers(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, uint8_t reg, uint8_t * p_data, uint32_t length);
 
 
 
@@ -44,7 +44,7 @@ uint32_t nrf_drv_mpu_write_registers(uint8_t reg, uint8_t * p_data, uint32_t len
  * @param[in]   data            Value
  * @retval      uint32_t        Error code
  */
-uint32_t nrf_drv_mpu_write_single_register(uint8_t reg, uint8_t data);
+uint32_t nrf_drv_mpu_write_single_register(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, uint8_t reg, uint8_t data);
 
 
 
@@ -55,11 +55,11 @@ uint32_t nrf_drv_mpu_write_single_register(uint8_t reg, uint8_t data);
  * @param[in]   length          Number of registers to read
  * @retval      uint32_t        Error code
  */
-uint32_t nrf_drv_mpu_read_registers(uint8_t reg, uint8_t * p_data, uint32_t length);
+uint32_t nrf_drv_mpu_read_registers(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, uint8_t reg, uint8_t * p_data, uint32_t length);
     
 
-uint32_t nrf_drv_mpu_read_magnetometer_registers(uint8_t reg, uint8_t * p_data, uint32_t length);
-uint32_t nrf_drv_mpu_write_magnetometer_register(uint8_t reg, uint8_t data);
+uint32_t nrf_drv_mpu_read_magnetometer_registers(uint8_t TWI_INSTANCE, uint8_t MPU_AK89XX_MAGN_ADDRESS, uint8_t reg, uint8_t * p_data, uint32_t length);
+uint32_t nrf_drv_mpu_write_magnetometer_register(uint8_t TWI_INSTANCE, uint8_t MPU_AK89XX_MAGN_ADDRESS, uint8_t reg, uint8_t data);
 
 #endif /* NRF_DRV_MPU__ */
 

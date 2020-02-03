@@ -83,6 +83,7 @@
 #include "app_mpu.h"
 #include "ble_mpu.h"
 #include "nrf_gpio.h"
+#include "nrf_drv_mpu.h"
 
 #define APP_FEATURE_NOT_SUPPORTED       BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2    /**< Reply when unsupported features are requested. */
 
@@ -732,32 +733,38 @@ static void advertising_start(bool erase_bonds)
     }
 }
 
-void mpu_init(void)
+void mpu_init(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS)
 {
     uint32_t err_code;
     // Initiate MPU driver
-    err_code = app_mpu_init();
+    err_code = app_mpu_init(TWI_INSTANCE, MPU_ADDRESS);
     APP_ERROR_CHECK(err_code); // Check for errors in return value
     
     // Setup and configure the MPU with intial values
     app_mpu_config_t p_mpu_config = MPU_DEFAULT_CONFIG(); 
     p_mpu_config.smplrt_div = 199;   // Change sampelrate. Sample Rate = Gyroscope Output Rate / (1 + SMPLRT_DIV). 199 gives a sample rate of 5Hz
     p_mpu_config.accel_config.afs_sel = AFS_2G; // Set accelerometer full scale range to 2G
-    err_code = app_mpu_config(&p_mpu_config); // Configure the MPU with above values
+   
+    err_code = app_mpu_config(TWI_INSTANCE, MPU_ADDRESS, &p_mpu_config); // Configure the MPU with above values
     APP_ERROR_CHECK(err_code); // Check for errors in return value
     
     
     // This is a way to configure the interrupt pin behaviour
     app_mpu_int_pin_cfg_t p_int_pin_cfg = MPU_DEFAULT_INT_PIN_CONFIG(); // Default configurations
     p_int_pin_cfg.int_rd_clear = 1; // When this bit is equal to 1, interrupt status bits are cleared on any read operation
-    err_code = app_mpu_int_cfg_pin(&p_int_pin_cfg); // Configure pin behaviour
+    err_code = app_mpu_int_cfg_pin(TWI_INSTANCE, MPU_ADDRESS, &p_int_pin_cfg); // Configure pin behaviour
     APP_ERROR_CHECK(err_code); // Check for errors in return value
     
     // Enable the MPU interrupts
     app_mpu_int_enable_t p_int_enable = MPU_DEFAULT_INT_ENABLE_CONFIG();
     p_int_enable.data_rdy_en = 1; // Trigger interrupt everytime new sensor values are available
-    err_code = app_mpu_int_enable(&p_int_enable); // Configure interrupts
+    err_code = app_mpu_int_enable(TWI_INSTANCE, MPU_ADDRESS, &p_int_enable); // Configure interrupts
     APP_ERROR_CHECK(err_code); // Check for errors in return value    
+
+    
+    app_mpu_magn_config_t m_config;
+    err_code = app_mpu_magnetometer_init(TWI_INSTANCE, MPU_ADDRESS, &m_config);
+    APP_ERROR_CHECK(err_code);
 }
 
 /**
@@ -803,8 +810,8 @@ int main(void)
     
     nrf_gpio_cfg_output(XENON_A1);
     nrf_gpio_cfg_output(XENON_A2);
-    nrf_gpio_pin_set(XENON_A1);
-    nrf_gpio_pin_clear(XENON_A2);
+    nrf_gpio_pin_set(XENON_A2);
+    nrf_gpio_pin_clear(XENON_A1);
 
     // Initialize.
     log_init();
@@ -819,10 +826,10 @@ int main(void)
    // advertising_init();
    // conn_params_init();
    // peer_manager_init();
-    mpu_init();
-    nrf_gpio_pin_set(XENON_A2);
-    nrf_gpio_pin_clear(XENON_A1);
-    mpu_init();
+    nrf_drv_mpu_init();
+    nrf_drv_mpu_init1();
+    mpu_init(1, 0x68);
+    mpu_init(0, 0x69);
     gpiote_setup();
     
     // Start execution.
@@ -832,7 +839,7 @@ int main(void)
     //advertising_start(erase_bonds);
 
     accel_values_t accel_values, accel_values1;
-    gyro_values_t gyro_values;
+    gyro_values_t gyro_values, gyro_values1;
     
     // Enter main loop.
     for (;;)
@@ -844,14 +851,15 @@ int main(void)
            // if(mpu_data_ready == true)
             {
                 // Read accelerometer data.
-                nrf_gpio_pin_set(XENON_A1);
-                nrf_gpio_pin_clear(XENON_A2);
-                err_code = app_mpu_read_accel(&accel_values);
-                nrf_gpio_pin_set(XENON_A2);
-                nrf_gpio_pin_clear(XENON_A1);
-                err_code = app_mpu_read_accel(&accel_values1);
+                err_code = app_mpu_read_accel(1, 0x68, &accel_values);
                 APP_ERROR_CHECK(err_code);
-                
+                err_code = app_mpu_read_accel(0, 0x69, &accel_values1);
+                APP_ERROR_CHECK(err_code);
+                err_code = app_mpu_read_gyro(1, 0x68, &gyro_values);
+                APP_ERROR_CHECK(err_code);
+                err_code = app_mpu_read_gyro(0, 0x69, &gyro_values1);
+                APP_ERROR_CHECK(err_code);
+
                 // Send MUP notification if in valid connection
 //                if ((m_mpu.conn_handle != BLE_CONN_HANDLE_INVALID) && (m_mpu.is_notification_enabled))
 //                {
@@ -859,9 +867,10 @@ int main(void)
 //                    APP_ERROR_CHECK(err_code);
 //                }
                 
-                NRF_LOG_INFO("Accel: %05d, %05d, %05d, %05d, %05d, %05d", accel_values.x, accel_values.y, accel_values.z, accel_values1.x, accel_values1.y, accel_values1.z);
+                //NRF_LOG_INFO("Accel: %05d, %05d, %05d, %05d, %05d, %05d", accel_values.x, accel_values.y, accel_values.z, accel_values1.x, accel_values1.y, accel_values1.z);
+                NRF_LOG_INFO("Gyro: %05d, %05d, %05d, %05d, %05d, %05d", gyro_values.x, gyro_values.y, gyro_values.z, gyro_values1.x, gyro_values1.y, gyro_values1.z);
                 
-                mpu_data_ready = false;
+                //mpu_data_ready = false;
             }
         }
     }

@@ -81,12 +81,12 @@
       <file file_name="../../../../../../components/libraries/bsp/bsp_nfc.c" />
     </folder>
     <folder Name="Application">
-      <file file_name="../../../app_mpu.c" />
-      <file file_name="../../../ble_mpu.c" />
-      <file file_name="../../../main.c" />
-      <file file_name="../../../nrf_drv_mpu_spi.c" />
-      <file file_name="../../../nrf_drv_mpu_twi.c" />
-      <file file_name="../../../../../../components/drivers_nrf/twi_master/nrf_drv_twi.c" />
+      <file file_name="app_mpu.c" />
+      <file file_name="ble_mpu.c" />
+      <file file_name="main.c" />
+      <file file_name="nrf_drv_twi.c" />
+      <file file_name="../config/sdk_config.h" />
+      <file file_name="nrf_drv_mpu.c" />
     </folder>
     <folder Name="nRF_Segger_RTT">
       <file file_name="../../../../../../external/segger_rtt/SEGGER_RTT.c" />

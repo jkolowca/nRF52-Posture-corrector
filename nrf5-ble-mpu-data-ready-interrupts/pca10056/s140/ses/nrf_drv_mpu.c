@@ -23,15 +23,16 @@
  */
 #define MPU_TWI_SCL_PIN XENON_SCL
 #define MPU_TWI_SDA_PIN XENON_SDA
+#define MPU_TWI_SCL_PIN1 XENON_D3
+#define MPU_TWI_SDA_PIN1 XENON_D2
 
 
 #define MPU_TWI_BUFFER_SIZE                     14 // 14 byte buffers will suffice to read acceleromter, gyroscope and temperature data in one transmission.
 #define MPU_TWI_TIMEOUT 			10000 
-#define MPU_ADDRESS     			0x68 
-#define MPU_AK89XX_MAGN_ADDRESS                 0x0C
 
 
 static const nrf_drv_twi_t m_twi_instance = NRF_DRV_TWI_INSTANCE(0);
+static const nrf_drv_twi_t m_twi_instance1 = NRF_DRV_TWI_INSTANCE(1);
 volatile static bool twi_tx_done = false;
 volatile static bool twi_rx_done = false;
 
@@ -69,6 +70,37 @@ static void nrf_drv_mpu_twi_event_handler(nrf_drv_twi_evt_t const * p_event, voi
     }
 }
 
+static void nrf_drv_mpu_twi_event_handler1(nrf_drv_twi_evt_t const * p_event, void * p_context)
+{
+    switch(p_event->type)
+    {
+        case NRF_DRV_TWI_EVT_DONE:
+            switch(p_event->xfer_desc.type)
+            {
+                case NRF_DRV_TWI_XFER_TX:
+                    twi_tx_done = true;
+                    break;
+                case NRF_DRV_TWI_XFER_TXTX:
+                    twi_tx_done = true;
+                    break;
+                case NRF_DRV_TWI_XFER_RX:
+                    twi_rx_done = true;
+                    break;
+                case NRF_DRV_TWI_XFER_TXRX:
+                    twi_rx_done = true;
+                    break;
+                default:
+                    break;
+            }
+            break;
+        case NRF_DRV_TWI_EVT_ADDRESS_NACK:
+            break;
+        case NRF_DRV_TWI_EVT_DATA_NACK:
+            break;
+        default:
+            break;
+    }
+}
 
 
 /**
@@ -98,6 +130,28 @@ uint32_t nrf_drv_mpu_init(void)
 	return NRF_SUCCESS;
 }
 
+uint32_t nrf_drv_mpu_init1(void)
+{
+    uint32_t err_code;
+    
+    const nrf_drv_twi_config_t twi_mpu_config = {
+       .scl                = MPU_TWI_SCL_PIN1,
+       .sda                = MPU_TWI_SDA_PIN1,
+       .frequency          = NRF_TWI_FREQ_400K,
+       .interrupt_priority = APP_IRQ_PRIORITY_HIGHEST,
+       .clear_bus_init     = false
+    };
+    
+    err_code = nrf_drv_twi_init(&m_twi_instance1, &twi_mpu_config, nrf_drv_mpu_twi_event_handler1, NULL);
+    if(err_code != NRF_SUCCESS)
+	{
+		return err_code;
+	}
+    
+    nrf_drv_twi_enable(&m_twi_instance1);
+	
+	return NRF_SUCCESS;
+}
 
 
 
@@ -110,7 +164,7 @@ static void merge_register_and_data(uint8_t * new_buffer, uint8_t reg, uint8_t *
 }
 
 
-uint32_t nrf_drv_mpu_write_registers(uint8_t reg, uint8_t * p_data, uint32_t length)
+uint32_t nrf_drv_mpu_write_registers(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, uint8_t reg, uint8_t * p_data, uint32_t length)
 {
     // This burst write function is not optimal and needs improvement.
     // The new SDK 11 TWI driver is not able to do two transmits without repeating the ADDRESS + Write bit byte
@@ -128,7 +182,8 @@ uint32_t nrf_drv_mpu_write_registers(uint8_t reg, uint8_t * p_data, uint32_t len
     xfer_desc.p_primary_buf = twi_tx_buffer;
 
     // Transferring
-    err_code = nrf_drv_twi_xfer(&m_twi_instance, &xfer_desc, 0);
+    if(!TWI_INSTANCE) err_code = nrf_drv_twi_xfer(&m_twi_instance, &xfer_desc, 0);
+    else err_code = nrf_drv_twi_xfer(&m_twi_instance1, &xfer_desc, 0);
 
     while((!twi_tx_done) && --timeout);
     if(!timeout) return NRF_ERROR_TIMEOUT;
@@ -137,14 +192,15 @@ uint32_t nrf_drv_mpu_write_registers(uint8_t reg, uint8_t * p_data, uint32_t len
     return err_code;
 }
 
-uint32_t nrf_drv_mpu_write_single_register(uint8_t reg, uint8_t data)
+uint32_t nrf_drv_mpu_write_single_register(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, uint8_t reg, uint8_t data)
 {
     uint32_t err_code;
     uint32_t timeout = MPU_TWI_TIMEOUT;
 
     uint8_t packet[2] = {reg, data};
 
-    err_code = nrf_drv_twi_tx(&m_twi_instance, MPU_ADDRESS, packet, 2, false);
+    if(!TWI_INSTANCE) err_code = nrf_drv_twi_tx(&m_twi_instance, MPU_ADDRESS, packet, 2, false);
+    else err_code = nrf_drv_twi_tx(&m_twi_instance1, MPU_ADDRESS, packet, 2, false);
     if(err_code != NRF_SUCCESS) return err_code;
 
     while((!twi_tx_done) && --timeout);
@@ -156,19 +212,21 @@ uint32_t nrf_drv_mpu_write_single_register(uint8_t reg, uint8_t data)
 }
 
 
-uint32_t nrf_drv_mpu_read_registers(uint8_t reg, uint8_t * p_data, uint32_t length)
+uint32_t nrf_drv_mpu_read_registers(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, uint8_t reg, uint8_t * p_data, uint32_t length)
 {
     uint32_t err_code;
     uint32_t timeout = MPU_TWI_TIMEOUT;
-
-    err_code = nrf_drv_twi_tx(&m_twi_instance, MPU_ADDRESS, &reg, 1, false);
+    
+    if(!TWI_INSTANCE) err_code = nrf_drv_twi_tx(&m_twi_instance, MPU_ADDRESS, &reg, 1, false);
+    else err_code = nrf_drv_twi_tx(&m_twi_instance1, MPU_ADDRESS, &reg, 1, false);
     if(err_code != NRF_SUCCESS) return err_code;
 
     while((!twi_tx_done) && --timeout);
     if(!timeout) return NRF_ERROR_TIMEOUT;
     twi_tx_done = false;
 
-    err_code = nrf_drv_twi_rx(&m_twi_instance, MPU_ADDRESS, p_data, length);
+    if(!TWI_INSTANCE) err_code = nrf_drv_twi_rx(&m_twi_instance, MPU_ADDRESS, p_data, length);
+    else err_code = nrf_drv_twi_rx(&m_twi_instance1, MPU_ADDRESS, p_data, length);
     if(err_code != NRF_SUCCESS) return err_code;
 
     timeout = MPU_TWI_TIMEOUT;
@@ -183,19 +241,21 @@ uint32_t nrf_drv_mpu_read_registers(uint8_t reg, uint8_t * p_data, uint32_t leng
 #if (defined(MPU9150) || defined(MPU9255)) && (TWI_COUNT >= 1) // Magnetometer only works with TWI so check if TWI is enabled
 
 
-uint32_t nrf_drv_mpu_read_magnetometer_registers(uint8_t reg, uint8_t * p_data, uint32_t length)
+uint32_t nrf_drv_mpu_read_magnetometer_registers(uint8_t TWI_INSTANCE, uint8_t MPU_AK89XX_MAGN_ADDRESS, uint8_t reg, uint8_t * p_data, uint32_t length)
 {
     uint32_t err_code;
     uint32_t timeout = MPU_TWI_TIMEOUT;
 
-    err_code = nrf_drv_twi_tx(&m_twi_instance, MPU_AK89XX_MAGN_ADDRESS, &reg, 1, false);
+    if(!TWI_INSTANCE) err_code = nrf_drv_twi_tx(&m_twi_instance, MPU_AK89XX_MAGN_ADDRESS, &reg, 1, false);
+    else err_code = nrf_drv_twi_tx(&m_twi_instance1, MPU_AK89XX_MAGN_ADDRESS, &reg, 1, false);
     if(err_code != NRF_SUCCESS) return err_code;
 
     while((!twi_tx_done) && --timeout);
     if(!timeout) return NRF_ERROR_TIMEOUT;
     twi_tx_done = false;
 
-    err_code = nrf_drv_twi_rx(&m_twi_instance, MPU_AK89XX_MAGN_ADDRESS, p_data, length);
+    if(!TWI_INSTANCE) err_code = nrf_drv_twi_rx(&m_twi_instance, MPU_AK89XX_MAGN_ADDRESS, p_data, length);
+    else err_code = nrf_drv_twi_rx(&m_twi_instance1, MPU_AK89XX_MAGN_ADDRESS, p_data, length);
     if(err_code != NRF_SUCCESS) return err_code;
 
     timeout = MPU_TWI_TIMEOUT;
@@ -207,14 +267,15 @@ uint32_t nrf_drv_mpu_read_magnetometer_registers(uint8_t reg, uint8_t * p_data, 
 }
 
 
-uint32_t nrf_drv_mpu_write_magnetometer_register(uint8_t reg, uint8_t data)
+uint32_t nrf_drv_mpu_write_magnetometer_register(uint8_t TWI_INSTANCE, uint8_t MPU_AK89XX_MAGN_ADDRESS, uint8_t reg, uint8_t data)
 {
     uint32_t err_code;
     uint32_t timeout = MPU_TWI_TIMEOUT;
 
     uint8_t packet[2] = {reg, data};
 
-    err_code = nrf_drv_twi_tx(&m_twi_instance, MPU_AK89XX_MAGN_ADDRESS, packet, 2, false);
+    if(!TWI_INSTANCE) err_code = nrf_drv_twi_tx(&m_twi_instance, MPU_AK89XX_MAGN_ADDRESS, packet, 2, false);
+    else err_code = nrf_drv_twi_tx(&m_twi_instance1, MPU_AK89XX_MAGN_ADDRESS, packet, 2, false);
     if(err_code != NRF_SUCCESS) return err_code;
 
     while((!twi_tx_done) && --timeout);

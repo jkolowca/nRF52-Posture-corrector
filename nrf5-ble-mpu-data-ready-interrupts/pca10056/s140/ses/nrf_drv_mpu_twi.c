@@ -27,7 +27,6 @@
 
 #define MPU_TWI_BUFFER_SIZE                     14 // 14 byte buffers will suffice to read acceleromter, gyroscope and temperature data in one transmission.
 #define MPU_TWI_TIMEOUT 			10000 
-#define MPU_ADDRESS     			0x68 
 #define MPU_AK89XX_MAGN_ADDRESS                 0x0C
 
 
@@ -110,7 +109,7 @@ static void merge_register_and_data(uint8_t * new_buffer, uint8_t reg, uint8_t *
 }
 
 
-uint32_t nrf_drv_mpu_write_registers(uint8_t reg, uint8_t * p_data, uint32_t length)
+uint32_t nrf_drv_mpu_write_registers(uint8_t MPU_ADDRESS, uint8_t reg, uint8_t * p_data, uint32_t length)
 {
     // This burst write function is not optimal and needs improvement.
     // The new SDK 11 TWI driver is not able to do two transmits without repeating the ADDRESS + Write bit byte
@@ -137,7 +136,7 @@ uint32_t nrf_drv_mpu_write_registers(uint8_t reg, uint8_t * p_data, uint32_t len
     return err_code;
 }
 
-uint32_t nrf_drv_mpu_write_single_register(uint8_t reg, uint8_t data)
+uint32_t nrf_drv_mpu_write_single_register(uint8_t MPU_ADDRESS, uint8_t reg, uint8_t data)
 {
     uint32_t err_code;
     uint32_t timeout = MPU_TWI_TIMEOUT;
@@ -156,7 +155,7 @@ uint32_t nrf_drv_mpu_write_single_register(uint8_t reg, uint8_t data)
 }
 
 
-uint32_t nrf_drv_mpu_read_registers(uint8_t reg, uint8_t * p_data, uint32_t length)
+uint32_t nrf_drv_mpu_read_registers(uint8_t MPU_ADDRESS, uint8_t reg, uint8_t * p_data, uint32_t length)
 {
     uint32_t err_code;
     uint32_t timeout = MPU_TWI_TIMEOUT;
