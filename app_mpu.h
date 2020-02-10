@@ -12,6 +12,7 @@
 #include <stdint.h>
 
 #include "nrf_peripherals.h"
+#include "imu_values.h"
 
 #if defined(MPU60x0)
     #include "mpu60x0_register_map.h"
@@ -28,7 +29,6 @@
 
 #define MPU_MPU_BASE_NUM    		0x4000
 #define MPU_BAD_PARAMETER       	(MPU_MPU_BASE_NUM + 0) // An invalid paramameter has been passed to function.
-
 
 /**@brief Enum defining Accelerometer's Full Scale range posibillities in Gs. */
 enum accel_range {
@@ -299,7 +299,7 @@ uint32_t app_mpu_int_enable(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, app_mpu_i
  * @param[in]   accel_values    Pointer to variable to hold accelerometer data
  * @retval      uint32_t        Error code
  */
-uint32_t app_mpu_read_accel(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, accel_values_t * accel_values);
+uint32_t app_mpu_read_accel(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, imu_values_t * accel_values);
 
 
 /**@brief Function for reading MPU gyroscope data.
@@ -307,7 +307,7 @@ uint32_t app_mpu_read_accel(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, accel_val
  * @param[in]   gyro_values     Pointer to variable to hold gyroscope data
  * @retval      uint32_t        Error code
  */
-uint32_t app_mpu_read_gyro(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, gyro_values_t * gyro_values);
+uint32_t app_mpu_read_gyro(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, imu_values_t * gyro_values);
 
 
 /**@brief Function for reading MPU temperature data.
@@ -407,6 +407,17 @@ uint32_t app_mpu_magnetometer_init(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, ap
  * @retval      uint32_t     				Error code
  */
 uint32_t app_mpu_read_magnetometer(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, magn_values_t * p_magnetometer_values, app_mpu_magn_read_status_t * p_read_status);
+
+
+/**
+ *  @brief      Push biases to the gyro bias 6500/6050 registers.
+ *  This function expects biases relative to the current sensor output, and
+ *  these biases will be added to the factory-supplied values. Bias inputs are LSB
+ *  in +-1000dps format.
+ *  @param[in]  gyro_bias  New biases.
+ *  @return     0 if successful.
+ */
+int mpu_set_gyro_bias_reg(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, long *gyro_bias);
 
 
 #endif

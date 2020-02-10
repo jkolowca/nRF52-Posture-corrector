@@ -13,7 +13,9 @@
 #include "nrf_error.h"
 #include "nrf_peripherals.h"
 
-
+#define LosowaStalaMateusza 3.14159265359f/180.0f
+#define ACC_SCALE  9.807f*2.0f/32767.5f
+#define GYRO_SCALE 2000.0f / 32767.5f * LosowaStalaMateusza
 
 uint32_t app_mpu_config(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, app_mpu_config_t * config)
 {
@@ -54,13 +56,17 @@ uint32_t app_mpu_init(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS)
     err_code = nrf_drv_mpu_write_single_register(TWI_INSTANCE, MPU_ADDRESS, MPU_REG_PWR_MGMT_1, 1);
     if(err_code != NRF_SUCCESS) return err_code;
 
+//    app_mpu_magn_config_t magn_conf = {4, 1};
+//    err_code = app_mpu_magnetometer_init(TWI_INSTANCE, MPU_ADDRESS, &magn_conf);
+//    if(err_code != NRF_SUCCESS) return err_code;
     return NRF_SUCCESS;
 }
 
 
 
-uint32_t app_mpu_read_accel(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, accel_values_t * accel_values)
+uint32_t app_mpu_read_accel(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, imu_values_t * imu_values)
 {
+    accel_values_t accel_values;
     uint32_t err_code;
     uint8_t raw_values[6];
     err_code = nrf_drv_mpu_read_registers(TWI_INSTANCE, MPU_ADDRESS, MPU_REG_ACCEL_XOUT_H, raw_values, 6);
@@ -68,19 +74,24 @@ uint32_t app_mpu_read_accel(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, accel_val
 
     // Reorganize read sensor values and put them into value struct
     uint8_t *data;
-    data = (uint8_t*)accel_values;
+    data = (uint8_t*)&accel_values;
     for(uint8_t i = 0; i<6; i++)
     {
         *data = raw_values[5-i];
         data++;
     }
+
+    imu_values->x = (float)(accel_values.x + 300)*ACC_SCALE;
+    imu_values->y = (float)(accel_values.y)*ACC_SCALE;
+    imu_values->z = (float)(accel_values.z)*ACC_SCALE;
     return NRF_SUCCESS;
 }
 
 
 
-uint32_t app_mpu_read_gyro(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, gyro_values_t * gyro_values)
+uint32_t app_mpu_read_gyro(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, imu_values_t * imu_values)
 {
+    gyro_values_t gyro_values;
     uint32_t err_code;
     uint8_t raw_values[6];
     err_code = nrf_drv_mpu_read_registers(TWI_INSTANCE, MPU_ADDRESS, MPU_REG_GYRO_XOUT_H, raw_values, 6);
@@ -88,12 +99,15 @@ uint32_t app_mpu_read_gyro(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, gyro_value
 
     // Reorganize read sensor values and put them into value struct
     uint8_t *data;
-    data = (uint8_t*)gyro_values;
+    data = (uint8_t*) &gyro_values;
     for(uint8_t i = 0; i<6; i++)
     {
         *data = raw_values[5-i];
         data++;
     }
+    imu_values->x = (float)(gyro_values.x - 34)* GYRO_SCALE;
+    imu_values->y = (float)(gyro_values.y -  0)* GYRO_SCALE;
+    imu_values->z = (float)(gyro_values.z - 28) * GYRO_SCALE;
     return NRF_SUCCESS;
 }
 
@@ -160,14 +174,14 @@ uint32_t app_mpu_magnetometer_init(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, ap
 	
 	// Write magnetometer config data	
 	uint8_t *data;
-    data = (uint8_t*)p_magnetometer_conf;	
-    return nrf_drv_mpu_write_magnetometer_register(TWI_INSTANCE, MPU_ADDRESS-0x5C, MPU_AK89XX_REG_CNTL, *data);
+        data = (uint8_t*)p_magnetometer_conf;	
+        return nrf_drv_mpu_write_magnetometer_register(TWI_INSTANCE, MPU_ADDRESS+0xE, MPU_AK89XX_REG_CNTL, *data);
 }
 
 uint32_t app_mpu_read_magnetometer(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, magn_values_t * p_magnetometer_values, app_mpu_magn_read_status_t * p_read_status)
 {
 	uint32_t err_code;
-	err_code = nrf_drv_mpu_read_magnetometer_registers(TWI_INSTANCE, MPU_ADDRESS - 0x5C, MPU_AK89XX_REG_HXL, (uint8_t *)p_magnetometer_values, 6);
+	err_code = nrf_drv_mpu_read_magnetometer_registers(TWI_INSTANCE, MPU_ADDRESS + 0xE, MPU_AK89XX_REG_HXL, (uint8_t *)p_magnetometer_values, 6);
 	if(err_code != NRF_SUCCESS) return err_code;
         
 	/* Quote from datasheet: MPU_AK89XX_REG_ST2 register has a role as data reading end register, also. When any of measurement data register is read
@@ -178,15 +192,47 @@ uint32_t app_mpu_read_magnetometer(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, ma
 	{
 		// If p_read_status equals NULL perform dummy read
 		uint8_t status_2_reg;
-		err_code = nrf_drv_mpu_read_magnetometer_registers(TWI_INSTANCE, MPU_ADDRESS - 0x5D, MPU_AK89XX_REG_ST2, &status_2_reg, 1);
+		err_code = nrf_drv_mpu_read_magnetometer_registers(TWI_INSTANCE, MPU_ADDRESS + 0xE, MPU_AK89XX_REG_ST2, &status_2_reg, 1);
 	}
 	else
 	{
 		// If p_read_status NOT equals NULL read and return value of MPU_AK89XX_REG_ST2
-		err_code = nrf_drv_mpu_read_magnetometer_registers(TWI_INSTANCE, MPU_ADDRESS - 0x5D, MPU_AK89XX_REG_ST2, (uint8_t *)p_read_status, 1);
+		err_code = nrf_drv_mpu_read_magnetometer_registers(TWI_INSTANCE, MPU_ADDRESS + 0xE, MPU_AK89XX_REG_ST2, (uint8_t *)p_read_status, 1);
 	}
 	return err_code;
 }
+
+/**
+ *  @brief      Push biases to the gyro bias 6500/6050 registers.
+ *  This function expects biases relative to the current sensor output, and
+ *  these biases will be added to the factory-supplied values. Bias inputs are LSB
+ *  in +-1000dps format.
+ *  @param[in]  gyro_bias  New biases.
+ *  @return     0 if successful.
+ */
+int mpu_set_gyro_bias_reg(uint8_t TWI_INSTANCE, uint8_t MPU_ADDRESS, long *gyro_bias)
+{
+    unsigned char data[6] = {0, 0, 0, 0, 0, 0};
+    int i=0;
+    for(i=0;i<3;i++) {
+    	gyro_bias[i]= (-gyro_bias[i]);
+    }
+    data[0] = (gyro_bias[0] >> 8) & 0xff;
+    data[1] = (gyro_bias[0]) & 0xff;
+    data[2] = (gyro_bias[1] >> 8) & 0xff;
+    data[3] = (gyro_bias[1]) & 0xff;
+    data[4] = (gyro_bias[2] >> 8) & 0xff;
+    data[5] = (gyro_bias[2]) & 0xff;
+    if ( nrf_drv_mpu_write_registers(TWI_INSTANCE, MPU_ADDRESS, 0x13, &data[0], 2))//i2c_write(st.hw->addr, 0x13, 2, &data[0]))
+        return -1;
+    if (nrf_drv_mpu_write_registers(TWI_INSTANCE, MPU_ADDRESS, 0x13, &data[0], 2))//i2c_write(st.hw->addr, 0x15, 2, &data[2]))
+        return -1;
+    if (nrf_drv_mpu_write_registers(TWI_INSTANCE, MPU_ADDRESS, 0x13, &data[0], 2))//i2c_write(st.hw->addr, 0x17, 2, &data[4]))
+        return -1;
+    return 0;
+}
+
+
 #endif // (defined(MPU9150) || defined(MPU9255)) && (MPU_USES_TWI) 
 
 /**
